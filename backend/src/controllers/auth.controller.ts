@@ -8,7 +8,16 @@ type LoginBody = {
   password?: string;
 };
 
+type SafeUser = {
+  [key: string]: unknown;
+  password?: string;
+  _id?: unknown;
+  __v?: unknown;
+};
+
 export const login: RequestHandler = async (req, res, next) => {
+  const startedAt = Date.now();
+
   try {
     const { username, password } = req.body as LoginBody;
 
@@ -17,14 +26,32 @@ export const login: RequestHandler = async (req, res, next) => {
       return;
     }
 
-    const user = await User.findOne({ username });
+    console.log("[LOGIN] Start:", username);
+
+    const user = await User.findOne({ username }).maxTimeMS(8000).lean<SafeUser>();
+
+    console.log("[LOGIN] User query done in:", Date.now() - startedAt, "ms");
 
     if (!user) {
       res.status(401).json({ message: "Invalid username or password" });
       return;
     }
 
-    const isValidPassword = await bcrypt.compare(password, user.password);
+    const storedPassword = String(user.password || "");
+
+    let isValidPassword = false;
+
+    if (
+      storedPassword.startsWith("$2a$") ||
+      storedPassword.startsWith("$2b$") ||
+      storedPassword.startsWith("$2y$")
+    ) {
+      isValidPassword = bcrypt.compareSync(password, storedPassword);
+    } else {
+      isValidPassword = password === storedPassword;
+    }
+
+    console.log("[LOGIN] Password check done in:", Date.now() - startedAt, "ms");
 
     if (!isValidPassword) {
       res.status(401).json({ message: "Invalid username or password" });
@@ -32,10 +59,26 @@ export const login: RequestHandler = async (req, res, next) => {
     }
 
     const jwtSecret = process.env.JWT_SECRET || "development_secret_key";
-    const token = jwt.sign({ id: user.id, role: user.role }, jwtSecret, { expiresIn: "7d" });
 
-    res.json({ token, user: user.toJSON() });
+    const token = jwt.sign(
+      {
+        id: user.id,
+        role: user.role
+      },
+      jwtSecret,
+      {
+        expiresIn: "7d"
+      }
+    );
+
+    const { password: _password, _id: _mongoId, __v: _version, ...safeUser } = user;
+
+    res.json({
+      token,
+      user: safeUser
+    });
   } catch (error) {
+    console.error("[LOGIN] Error:", error);
     next(error);
   }
 };
