@@ -5,14 +5,7 @@ import { connectDB } from "../src/config/db";
 
 const handler = serverless(app);
 
-let connectionPromise: Promise<void> | null = null;
-
 export default async function api(req: VercelRequest, res: VercelResponse) {
-  if (!connectionPromise) {
-    connectionPromise = connectDB();
-  }
-
-  await connectionPromise;
-
+  await connectDB();
   return handler(req, res);
 }
