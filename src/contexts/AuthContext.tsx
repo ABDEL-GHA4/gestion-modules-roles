@@ -21,8 +21,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("currentUser");
-    const storedToken = localStorage.getItem("token");
+    const storedUser = sessionStorage.getItem("currentUser");
+    const storedToken = sessionStorage.getItem("token");
 
     if (storedUser && storedToken) {
       setCurrentUser(JSON.parse(storedUser) as User);
@@ -39,15 +39,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setCurrentUser(response.user);
       setIsAuthenticated(true);
-      localStorage.setItem("currentUser", JSON.stringify(response.user));
-      localStorage.setItem("token", response.token);
+
+      sessionStorage.setItem("currentUser", JSON.stringify(response.user));
+      sessionStorage.setItem("token", response.token);
+
       return true;
     } catch (error) {
       console.error(error);
+
       setCurrentUser(null);
       setIsAuthenticated(false);
-      localStorage.removeItem("currentUser");
-      localStorage.removeItem("token");
+
+      sessionStorage.removeItem("currentUser");
+      sessionStorage.removeItem("token");
+
       return false;
     }
   };
@@ -55,17 +60,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setCurrentUser(null);
     setIsAuthenticated(false);
-    localStorage.removeItem("currentUser");
-    localStorage.removeItem("token");
+
+    sessionStorage.removeItem("currentUser");
+    sessionStorage.removeItem("token");
   };
 
-  return <AuthContext.Provider value={{ currentUser, login, logout, isAuthenticated }}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ currentUser, login, logout, isAuthenticated }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
+
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
+
   return context;
 };

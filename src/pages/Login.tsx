@@ -55,8 +55,7 @@ const Login: React.FC = () => {
       toast.dismiss(loadingToastId);
 
       if (success) {
-        const user = JSON.parse(localStorage.getItem("currentUser") || "{}");
-
+        const user = JSON.parse(sessionStorage.getItem("currentUser") || "{}");
         // Toast de succès avec animation
         toast.success("Connexion réussie !", {
           description: `Bienvenue ${user.username || username}`,

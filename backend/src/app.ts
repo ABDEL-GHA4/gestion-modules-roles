@@ -10,15 +10,26 @@ import usersRoutes from "./routes/users.routes";
 
 const app = express();
 
-const clientUrl = process.env.CLIENT_URL || "http://localhost:8080";
+const allowedOrigins = (
+  process.env.CLIENT_URL ||
+  "http://localhost:8080,https://gestion-modules-roles-frontend.vercel.app"
+)
+  .split(",")
+  .map((origin) => origin.trim());
 
 app.use(
   cors({
-    origin: clientUrl,
-    credentials: true
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
   })
 );
-
 app.use(express.json());
 
 app.get("/", (_req, res) => {
